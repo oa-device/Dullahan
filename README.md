@@ -2,22 +2,23 @@
 
 ## Overview
 
-Dullahan is an internal multi-platform video analysis system designed for Mac and Ubuntu, leveraging YOLO-based object detection to process multiple video streams in real-time. It builds upon the existing oaTracker project, focusing on local data processing to respect privacy by not uploading or storing images in the cloud.
+Dullahan is an internal multi-platform video analysis system designed for Mac and Ubuntu, leveraging YOLO-based object detection to process multiple video streams in real-time. It builds upon the existing oaTracker project, focusing on local data processing to respect privacy by not uploading or storing images in the cloud. The project now uses Docker for improved consistency and easier deployment across different environments.
 
 ## Table of Contents
 
 1. [Architecture](#architecture)
-2. [Installation](#installation)
-3. [Configuration](#configuration)
-4. [Usage](#usage)
-5. [Development](#development)
-6. [API Endpoints](#api-endpoints)
-7. [Dummy Tracker](#dummy-tracker)
-8. [Logging](#logging)
+2. [Prerequisites](#prerequisites)
+3. [Installation](#installation)
+4. [Configuration](#configuration)
+5. [Usage](#usage)
+6. [Development](#development)
+7. [API Endpoints](#api-endpoints)
+8. [Docker Setup](#docker-setup)
+9. [Logging](#logging)
 
 ## Architecture
 
-Dullahan consists of three main components:
+Dullahan consists of three main components, each running in its own Docker container:
 
 1. **Tracker**
 
@@ -39,6 +40,12 @@ Dullahan consists of three main components:
    - Data flow coordination
    - System-wide optimization
 
+## Prerequisites
+
+- Docker
+- Docker Compose
+- Git
+
 ## Installation
 
 ```bash
@@ -48,13 +55,13 @@ git clone <repository_url> dullahan
 # Navigate to the project directory
 cd dullahan
 
-# Run the setup script
-./scripts/setup.sh
+# Build and start the Docker containers
+docker-compose up --build
 ```
 
 ## Configuration
 
-Edit the `config.yaml` file in the project root directory to customize settings:
+Edit the `config.yaml` file in the project root directory to customize settings. The Docker containers will use this configuration file.
 
 ```yaml
 cloud:
@@ -87,13 +94,23 @@ observation_types:
 
 ## Usage
 
-TODO
+To start the Dullahan system:
+
+```bash
+docker-compose up
+```
+
+To stop the system:
+
+```bash
+docker-compose down
+```
 
 ## Development
 
 ### Workflow
 
-1. Implement each component separately
+1. Implement each component separately within its Docker container
 2. Ensure cross-platform compatibility for each module
 3. Integrate components following the system diagram
 4. Implement comprehensive testing for the entire system
@@ -101,10 +118,10 @@ TODO
 
 ### Key Tasks
 
-1. Enhance oaTracker for Dullahan integration
+1. Enhance oaTracker for Dullahan integration within the Tracker container
 2. Develop Proxy Cache with robust error handling, caching, and cloud integration
 3. Create Orchestrator for multi-tracker management
-4. Ensure seamless inter-component communication
+4. Ensure seamless inter-container communication
 
 ## API Endpoints
 
@@ -249,57 +266,50 @@ curl --location 'https://7pyzcafao6.execute-api.ca-central-1.amazonaws.com/camer
 
 This example shows how multiple observations can be sent in a single request, demonstrating the batch processing capability.
 
-## Dummy Tracker
+## Docker Setup
 
-A temporary dummy tracker has been implemented to simulate the behavior of the actual tracker while it's still under development. This allows for testing and development of other components in the Dullahan project.
+The project uses Docker to containerize each component. The `docker` directory contains subdirectories for each component:
 
-### Features
+- `docker/tracker`: Dockerfile and related files for the Tracker component
+- `docker/proxy`: Dockerfile and related files for the Proxy Cache component
+- `docker/orchestrator`: Dockerfile and related files for the Orchestrator component
 
-- Generates random detection data
-- Provides a simple HTTP API endpoint for data retrieval
-- Mimics the expected data format of the actual tracker
+The `docker-compose.yml` file in the root directory defines the multi-container Docker application.
 
-### Setup and Usage
+To build the Docker images:
 
-1. Navigate to the `apps/tracker` directory
-2. Run `npm install` to install dependencies
-3. Start the server with `npm start`
-4. Access random detection data at `http://localhost:3000/detect`
+```bash
+docker-compose build
+```
 
-For more details, refer to the README.md file in the `apps/tracker` directory.
+To start the containers:
 
-Note: This dummy tracker is a temporary solution and should be replaced with the actual tracker implementation once it's ready.
+```bash
+docker-compose up
+```
+
+To stop and remove the containers:
+
+```bash
+docker-compose down
+```
 
 ## Logging
 
-Dullahan uses a universal logging system that works across both Python and Node.js components. The logging system is based on a bash script (`scripts/log.sh`) and provides wrapper modules for both Python and Node.js.
+Dullahan uses a universal logging system that works across all Docker containers. Logs are collected from each container and can be viewed using Docker's logging capabilities.
 
-### Python Logging
+To view logs for all containers:
 
-To use logging in Python files:
-
-```python
-from shared.python_logging import info, warn, error
-
-info('module_name', 'This is an informational message')
-warn('module_name', 'This is a warning message')
-error('module_name', 'This is an error message')
+```bash
+docker-compose logs
 ```
 
-### Node.js Logging
+To view logs for a specific container:
 
-To use logging in Node.js files:
-
-```javascript
-const logger = require('../../shared/node_logging');
-
-logger.info('module_name', 'This is an informational message');
-logger.warn('module_name', 'This is a warning message');
-logger.error('module_name', 'This is an error message');
+```bash
+docker-compose logs [tracker|proxy|orchestrator]
 ```
 
-Logs are written to the `logs/` directory, with separate log files for each module. The logging system automatically handles log rotation to manage file sizes and maintain a history of log files.
+For more detailed logging information, refer to the logging documentation in each component's respective directory.
 
-The logging system is set up during the project initialization process in the `setup.sh` script. It creates the necessary directories and ensures that the logging script is executable.
-
-This universal logging approach ensures consistent logging across all components of the Dullahan project, regardless of the programming language used in each module.
+This Docker-based setup ensures consistent logging across all components of the Dullahan project, regardless of the programming language used in each module, and provides easy access to logs for debugging and monitoring purposes.
