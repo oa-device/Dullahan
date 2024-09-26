@@ -1,0 +1,4 @@
+[submodule "apps/tracker"]
+	path = apps/tracker
+	url = https://github.com/oa-device/oaTracker.git
+	branch = main

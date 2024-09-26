@@ -1,0 +1,54 @@
+# Dullahan Project Configuration
+
+# Cloud Settings
+cloud:
+  url: "https://7pyzcafao6.execute-api.ca-central-1.amazonaws.com"
+  # api_key:
+
+# Tracker Settings
+trackers:
+  count: 2 # Number of trackers to run
+  model: "yolov8n.pt" # Default model for all trackers
+
+# Video Sources
+video_sources:
+  - name: "Camera 1"
+    type: "webcam"
+    id: 0
+  - name: "Camera 2"
+    type: "rtsp"
+    url: "rtsp://example.com/stream1"
+
+# Proxy Cache Settings
+proxy_cache:
+  enabled: true
+  check_interval: 300 # Network check interval in seconds
+
+# Observation Types
+observation_types:
+  - "crowd"
+  - "doors"
+  - "views"
+  - "waiting_time"
+  - "objects"
+
+# Performance Settings
+performance:
+  max_fps: 30
+  gpu_enabled: true
+
+# Logging
+logging:
+  level: "INFO"
+  file: "dullahan.log"
+
+# Security
+security:
+  encrypt_data: true
+  ssl_verify: true
+
+# Advanced Settings
+advanced:
+  debug_mode: false
+  save_processed_frames: false
+  frame_buffer_size: 100

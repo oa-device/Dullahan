@@ -1,0 +1,81 @@
+# Custom ignore patterns
+
+# General
+.DS_Store
+*.log
+*.tmp
+*.temp
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+.tox/
+.cache
+nosetests.xml
+coverage.xml
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.npm
+.yarn/
+.pnp.*
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.sublime-workspace
+*.sublime-project
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Compiled files
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+
+# Packages
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases
+*.sqlite
+*.db
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
