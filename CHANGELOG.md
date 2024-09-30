@@ -5,6 +5,24 @@ All notable changes to the Dullahan project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2024-09-29
+
+### Added
+
+- Improved error handling in setup script
+- Debug mode for setup script with detailed logging
+
+### Changed
+
+- Enhanced setup.sh script to preserve local changes in submodules
+- Updated submodule update process to use `git merge` instead of `git reset --hard`
+- Implemented stashing of local changes before updating submodules
+- Added branch-specific updates for submodules (e.g., 'dev' branch for proxy)
+
+### Fixed
+
+- Issue with losing newest updates when running the setup script
+
 ## [0.3.0] - 2024-09-26
 
 ### Added
