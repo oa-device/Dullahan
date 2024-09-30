@@ -2,7 +2,7 @@
 
 ## Overview
 
-Dullahan is an internal multi-platform video analysis system designed for Mac and Ubuntu, leveraging YOLO-based object detection to process multiple video streams in real-time. It builds upon the existing oaTracker project, focusing on local data processing to respect privacy by not uploading or storing images in the cloud. The project now uses Docker for improved consistency and easier deployment across different environments.
+Dullahan is an internal multi-platform video analysis system designed for Mac and Ubuntu, leveraging YOLO-based object detection to process multiple video streams in real-time. It builds upon the existing oaTracker project, focusing on local data processing to respect privacy by not uploading or storing images in the cloud. The project uses a hybrid approach, with the tracker module running as a native Python application and the orchestrator and proxy components containerized using Docker for improved consistency and easier deployment.
 
 ## Table of Contents
 
@@ -18,16 +18,17 @@ Dullahan is an internal multi-platform video analysis system designed for Mac an
 
 ## Architecture
 
-Dullahan consists of three main components, each running in its own Docker container:
+Dullahan consists of three main components:
 
 1. **Tracker**
 
-   - Core functionality from oaTracker (currently represented by a dummy implementation)
-   - YOLO-based object detection using Ultralytics (to be implemented)
-   - Multi-source video support (to be implemented)
+   - Core functionality from oaTracker
+   - YOLO-based object detection using Ultralytics
+   - Multi-source video support
    - HTTP API for data access
+   - Runs as a native Python application
 
-2. **Proxy Cache**
+2. **Proxy Cache** (Docker container)
 
    - Manages network interruptions
    - Request caching and auto-resend
@@ -35,33 +36,47 @@ Dullahan consists of three main components, each running in its own Docker conta
    - Handles Cloud Integration
    - HTTP/HTTPS data transmission to cloud services
 
-3. **Orchestrator**
+3. **Orchestrator** (Docker container)
    - Central management for multiple trackers
    - Data flow coordination
    - System-wide optimization
 
 ## Prerequisites
 
+- Python 3.10
 - Docker
 - Docker Compose
 - Git
 
 ## Installation
 
-```bash
-# Clone the repository
-git clone <repository_url> dullahan
+1. Clone the repository:
 
-# Navigate to the project directory
-cd dullahan
+   ```bash
+   # Clone the repository
+   git clone <repository_url> dullahan
 
-# Build and start the Docker containers
-docker-compose up --build
-```
+   # Navigate to the project directory
+   cd dullahan
+   ```
+
+2. Set up the tracker module:
+
+   ```bash
+   cd apps/tracker
+   ./setup.sh
+   ```
+
+3. Build and start the Docker containers for orchestrator and proxy:
+
+   ```bash
+   cd ../..
+   docker-compose up --build orchestrator proxy
+   ```
 
 ## Configuration
 
-Edit the `config.yaml` file in the project root directory to customize settings. The Docker containers will use this configuration file.
+Edit the `config.yaml` file in the project root directory to customize settings. The Docker containers and the tracker module will use this configuration file.
 
 ```yaml
 cloud:
@@ -96,32 +111,46 @@ observation_types:
 
 To start the Dullahan system:
 
-```bash
-docker-compose up
-```
+1. Start the tracker module:
+
+   ```bash
+   cd apps/tracker
+   source venv/bin/activate
+   python main.py
+   ```
+
+2. In a new terminal, start the Docker containers:
+
+   ```bash
+   docker-compose up orchestrator proxy
+   ```
 
 To stop the system:
 
-```bash
-docker-compose down
-```
+1. Stop the tracker module by pressing Ctrl+C in its terminal.
+2. Stop the Docker containers:
+
+   ```bash
+   docker-compose down
+   ```
 
 ## Development
 
 ### Workflow
 
-1. Implement each component separately within its Docker container
-2. Ensure cross-platform compatibility for each module
-3. Integrate components following the system diagram
-4. Implement comprehensive testing for the entire system
-5. Optimize for real-time performance
+1. Implement the tracker component as a native Python application
+2. Develop the orchestrator and proxy components within their respective Docker containers
+3. Ensure cross-platform compatibility for each module
+4. Integrate components following the system diagram
+5. Implement comprehensive testing for the entire system
+6. Optimize for real-time performance
 
 ### Key Tasks
 
-1. Enhance oaTracker for Dullahan integration within the Tracker container
+1. Enhance oaTracker for Dullahan integration within the tracker module
 2. Develop Proxy Cache with robust error handling, caching, and cloud integration
 3. Create Orchestrator for multi-tracker management
-4. Ensure seamless inter-container communication
+4. Ensure seamless communication between the native tracker and containerized components
 
 ## API Endpoints
 
@@ -268,24 +297,23 @@ This example shows how multiple observations can be sent in a single request, de
 
 ## Docker Setup
 
-The project uses Docker to containerize each component. The `docker` directory contains subdirectories for each component:
+The project uses Docker to containerize the orchestrator and proxy components. The `docker` directory contains subdirectories for these components:
 
-- `docker/tracker`: Dockerfile and related files for the Tracker component
 - `docker/proxy`: Dockerfile and related files for the Proxy Cache component
 - `docker/orchestrator`: Dockerfile and related files for the Orchestrator component
 
-The `docker-compose.yml` file in the root directory defines the multi-container Docker application.
+The `docker-compose.yml` file in the root directory defines the multi-container Docker application for these components.
 
 To build the Docker images:
 
 ```bash
-docker-compose build
+docker-compose build orchestrator proxy
 ```
 
 To start the containers:
 
 ```bash
-docker-compose up
+docker-compose up orchestrator proxy
 ```
 
 To stop and remove the containers:
@@ -296,9 +324,13 @@ docker-compose down
 
 ## Logging
 
-Dullahan uses a universal logging system that works across all Docker containers. Logs are collected from each container and can be viewed using Docker's logging capabilities.
+Dullahan uses a universal logging system that works across all components, including the native tracker application and Docker containers. Logs are collected from each component and can be viewed using appropriate tools.
 
-To view logs for all containers:
+For the tracker module:
+
+- Logs are written to a file specified in the configuration
+
+For Docker containers:
 
 ```bash
 docker-compose logs
@@ -307,9 +339,9 @@ docker-compose logs
 To view logs for a specific container:
 
 ```bash
-docker-compose logs [tracker|proxy|orchestrator]
+docker-compose logs [proxy|orchestrator]
 ```
 
 For more detailed logging information, refer to the logging documentation in each component's respective directory.
 
-This Docker-based setup ensures consistent logging across all components of the Dullahan project, regardless of the programming language used in each module, and provides easy access to logs for debugging and monitoring purposes.
+This hybrid setup ensures consistent logging across all components of the Dullahan project, regardless of whether they are containerized or running natively, and provides easy access to logs for debugging and monitoring purposes.

@@ -1,33 +1,34 @@
 # Dullahan Project TODO List
 
-## 1. Docker Integration
+## 1. Hybrid Architecture Setup
 
-- [ ] Create Dockerfile for Tracker component
+- [x] Set up native Python environment for Tracker component
 - [ ] Create Dockerfile for Proxy Cache component
 - [ ] Create Dockerfile for Orchestrator component
-- [ ] Develop docker-compose.yml for local development and testing
-- [ ] Update setup.sh script to include Docker setup
-- [ ] Create .dockerignore files for each component
-- [ ] Set up Docker networking for inter-container communication
+- [ ] Develop docker-compose.yml for Proxy Cache and Orchestrator
+- [x] Update setup.sh script to include both native Python and Docker setup
+- [ ] Create .dockerignore files for Docker components
+- [ ] Set up networking between native Tracker and Docker containers
 
 ## 2. Project Structure Refactoring
 
-- [ ] Reorganize project structure to align with Docker best practices
-- [ ] Update import statements and file paths in all components
-- [ ] Ensure cross-component communication works in containerized environment
-- [ ] Create Docker-specific environment variable files (.env)
+- [x] Reorganize project structure to align with hybrid architecture
+- [x] Update import statements and file paths in all components
+- [ ] Ensure communication works between native Tracker and containerized components
+- [ ] Create environment variable files for both native and Docker components
 
-## 3. Tracker Component
+## 3. Tracker Component (Native Python)
 
-- [ ] Port oaTracker functionality to Docker container
-- [ ] Implement YOLO-based object detection using Ultralytics
-- [ ] Develop multi-source video support
-- [ ] Create HTTP API for data access
-- [ ] Ensure cross-platform compatibility (Mac and Ubuntu) within container
-- [ ] Optimize Tracker container for GPU usage (if applicable)
+- [x] Integrate oaTracker functionality into the main project
+- [x] Implement YOLO-based object detection using Ultralytics
+- [x] Develop multi-source video support
+- [x] Create HTTP API for data access
+- [x] Ensure cross-platform compatibility (Mac and Ubuntu)
+- [x] Optimize Tracker for GPU usage (if applicable)
 
-## 4. Proxy Cache Component
+## 4. Proxy Cache Component (Docker)
 
+- [ ] Create basic Node.js application structure
 - [ ] Implement request caching mechanism
 - [ ] Develop network interruption handling
 - [ ] Create auto-resend functionality
@@ -35,105 +36,107 @@
 - [ ] Implement cloud integration with HTTP/HTTPS transmission
 - [ ] Configure volume mounting for persistent cache storage
 
-## 5. Orchestrator Component
+## 5. Orchestrator Component (Docker)
 
-- [ ] Develop central management for multiple Tracker containers
-- [ ] Implement data flow coordination between containers
+- [ ] Create basic Python application structure
+- [ ] Develop central management for multiple Tracker instances
+- [ ] Implement data flow coordination between Tracker and Proxy Cache
 - [ ] Create system-wide optimization logic
 - [ ] Implement container health checks and restart policies
 
 ## 6. Configuration Management
 
-- [ ] Update config.yaml to include Docker-specific configurations
-- [ ] Implement secure configuration loading in containerized environment
-- [ ] Add validation for Docker-related configuration options
-- [ ] Create a mechanism for updating configurations without rebuilding containers
+- [x] Update config.yaml to include both native and Docker-specific configurations
+- [x] Implement secure configuration loading for both environments
+- [x] Add validation for all configuration options
+- [ ] Create a mechanism for updating configurations without rebuilding Docker containers
 
 ## 7. API Development
 
-- [ ] Implement POST /cameras/{id}/observations/{type} endpoint
-- [ ] Add support for different observation types (crowd, doors, views, waiting_time, objects)
-- [ ] Implement error handling and input validation
-- [ ] Ensure API endpoints are accessible in containerized environment
+- [x] Implement POST /cameras/{id}/observations/{type} endpoint
+- [x] Add support for different observation types (crowd, doors, views, waiting_time, objects)
+- [x] Implement error handling and input validation
+- [ ] Ensure API endpoints are accessible in the hybrid environment
 - [ ] Implement API versioning for future compatibility
 
-## 8. Testing in Containerized Environment
+## 8. Testing in Hybrid Environment
 
-- [ ] Develop unit tests for each component running in containers
-- [ ] Create integration tests for inter-container communication
-- [ ] Implement system-wide tests using docker-compose
-- [ ] Set up CI/CD pipeline with Docker support (e.g., GitHub Actions, GitLab CI)
-- [ ] Implement automated testing for different Docker configurations
+- [ ] Develop unit tests for each component (native and containerized)
+- [ ] Create integration tests for communication between native and Docker components
+- [ ] Implement system-wide tests using both native Python and docker-compose
+- [ ] Set up CI/CD pipeline with support for both native and Docker components
+- [ ] Implement automated testing for different configurations
 
 ## 9. Documentation Updates
 
-- [ ] Update README.md with Docker-based setup and run instructions
-- [ ] Create API documentation reflecting containerized architecture
-- [ ] Write developer guidelines for working with Docker in this project
-- [ ] Document installation and setup process for Docker-based deployment
-- [ ] Create troubleshooting guide for common Docker-related issues
+- [x] Update README.md with hybrid setup and run instructions
+- [x] Update WORKFLOW.md to reflect the new hybrid architecture
+- [ ] Create API documentation reflecting the hybrid architecture
+- [ ] Write developer guidelines for working with both native Python and Docker in this project
+- [ ] Document installation and setup process for hybrid deployment
+- [ ] Create troubleshooting guide for common issues in the hybrid setup
 
 ## 10. Performance Optimization
 
-- [ ] Profile each component for performance bottlenecks in containerized environment
-- [ ] Optimize real-time video processing within Docker constraints
-- [ ] Implement efficient data caching and transmission between containers
-- [ ] Optimize Docker image sizes for faster deployment
+- [x] Profile each component for performance bottlenecks in the hybrid environment
+- [x] Optimize real-time video processing in the native Tracker
+- [ ] Implement efficient data transmission between native and Docker components
+- [ ] Optimize Docker image sizes for faster deployment of containerized components
 
 ## 11. Security Enhancements
 
-- [ ] Implement secure inter-container communication
+- [ ] Implement secure communication between native Tracker and Docker containers
 - [ ] Add data encryption for cloud transmission
-- [ ] Conduct security audit of containerized application
-- [ ] Implement least privilege principle in Docker configurations
-- [ ] Set up Docker secrets for sensitive information management
+- [ ] Conduct security audit of the hybrid application
+- [ ] Implement least privilege principle in both native and Docker configurations
+- [ ] Set up secure management for sensitive information
 
 ## 12. Deployment
 
-- [ ] Create Docker-based build process for Mac and Ubuntu
-- [ ] Develop deployment scripts for container orchestration (e.g., Kubernetes)
+- [x] Create build process for native Tracker on Mac and Ubuntu
+- [ ] Develop deployment scripts for Docker components
 - [ ] Set up container registry for storing and distributing Docker images
-- [ ] Implement rolling updates strategy for zero-downtime deployments
+- [ ] Implement update strategy for both native and Docker components
 
 ## 13. Monitoring and Logging
 
-- [ ] Implement centralized logging for all containers
-- [ ] Set up monitoring for container health and performance
-- [ ] Create alerting mechanism for critical issues in containerized environment
+- [x] Implement centralized logging for both native and Docker components
+- [ ] Set up monitoring for overall system health and performance
+- [ ] Create alerting mechanism for critical issues in the hybrid environment
 - [ ] Integrate with external monitoring tools (e.g., Prometheus, Grafana)
 
 ## 14. User Interface (if required)
 
-- [ ] Design user interface for system management compatible with containerized backend
-- [ ] Implement UI for configuration and monitoring of Docker-based system
-- [ ] Ensure UI can handle dynamic scaling of Tracker containers
+- [ ] Design user interface for system management compatible with hybrid backend
+- [ ] Implement UI for configuration and monitoring of the entire system
+- [ ] Ensure UI can handle multiple Tracker instances and Docker components
 
 ## 15. Final Testing and Quality Assurance
 
-- [ ] Conduct thorough system testing in production-like containerized environment
-- [ ] Perform user acceptance testing with Docker-based deployment
-- [ ] Address and fix any identified issues related to containerization
-- [ ] Conduct load testing on the containerized system
+- [ ] Conduct thorough system testing in production-like hybrid environment
+- [ ] Perform user acceptance testing with hybrid deployment
+- [ ] Address and fix any identified issues related to the hybrid architecture
+- [ ] Conduct load testing on the entire system
 
 ## 16. Documentation Finalization
 
-- [ ] Review and update all documentation to reflect Docker-based architecture
-- [ ] Create user manual for Docker-based deployment and management
-- [ ] Prepare release notes highlighting Docker integration
-- [ ] Document backup and restore procedures for Docker volumes
+- [ ] Review and update all documentation to reflect the hybrid architecture
+- [ ] Create user manual for hybrid deployment and management
+- [ ] Prepare release notes highlighting the new architecture
+- [ ] Document backup and restore procedures for both native and Docker components
 
 ## 17. Project Handover and Training
 
-- [ ] Prepare handover documentation including Docker-specific details
-- [ ] Conduct training sessions on Docker-based development and deployment
-- [ ] Set up support channels for post-release assistance with containerized system
-- [ ] Create FAQ document for Docker-related questions
+- [ ] Prepare handover documentation including details on both native and Docker components
+- [ ] Conduct training sessions on hybrid development and deployment
+- [ ] Set up support channels for post-release assistance
+- [ ] Create FAQ document for common questions about the hybrid setup
 
 ## 18. Continuous Improvement
 
-- [ ] Establish process for regular Docker image updates and security patches
-- [ ] Plan for future scalability using container orchestration technologies
-- [ ] Set up automated performance testing and optimization for containerized components
-- [ ] Implement a feedback loop for continuous Docker-based improvements
+- [ ] Establish process for regular updates and security patches for both native and Docker components
+- [ ] Plan for future scalability using the hybrid architecture
+- [ ] Set up automated performance testing and optimization for all components
+- [ ] Implement a feedback loop for continuous improvements in the hybrid system
 
-This updated TODO list provides a comprehensive overview of tasks required for the Docker integration and overall project development. It covers all aspects of the containerized architecture while maintaining the original project goals.
+This updated TODO list reflects the current state of the project with the hybrid architecture, including completed tasks and new specific tasks for the orchestrator and proxy components.
