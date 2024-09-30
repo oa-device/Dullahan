@@ -9,13 +9,13 @@ const { Command } = require('commander');
 // Initialize Commander
 const program = new Command();
 program
-    .option('-p, --port <number>', 'Port to run the server', 3000) // default to 3000
+    .option('-p, --port <number>', 'Port to run the server', 3001) // default to 3001
     .parse(process.argv);
 
 const options = program.opts();
 
 // Set the port using the command-line argument or the default
-const PORT = options.port || process.env.PROXY_PORT || 3000;
+const PORT = options.port || process.env.PROXY_PORT || 3001;
 
 const app = express();
 app.use(express.json());
@@ -27,6 +27,11 @@ const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 if (!fs.existsSync(REQUESTS_FILE)) {
     fs.writeFileSync(REQUESTS_FILE, JSON.stringify({}));
 }
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'OK' });
+});
 
 app.post('/data', async (req, res) => {
     const targetUrl = req.query.url;
@@ -111,5 +116,5 @@ function resendRequests() {
 setInterval(checkConnectivity, CHECK_INTERVAL);
 
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`Proxy server is running on port ${PORT}`);
 });

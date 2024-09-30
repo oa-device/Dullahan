@@ -11,6 +11,8 @@ NC='\033[0m' # No Color
 
 # Debug mode flag
 DEBUG=false
+FORCE_UPDATE=false
+SKIP_UPDATE=false
 
 # Function to log messages
 log() {
@@ -51,8 +53,19 @@ update_submodule() {
 
             # Check for local changes
             if ! git diff-index --quiet HEAD --; then
-                warn "Local changes detected in $submodule. Stashing changes..."
-                git stash
+                if [ "$FORCE_UPDATE" = true ]; then
+                    warn "Local changes detected in $submodule. Force update is enabled. Overwriting changes..."
+                    git reset --hard
+                    git clean -fd
+                else
+                    warn "Local changes detected in $submodule. Skipping update to preserve changes."
+                    return 0
+                fi
+            fi
+
+            if [ "$SKIP_UPDATE" = true ]; then
+                warn "Update skipped for $submodule due to --skip-update flag."
+                return 0
             fi
 
             debug "Fetching from origin..."
@@ -62,21 +75,15 @@ update_submodule() {
             fi
 
             debug "Checking out $branch branch..."
-            if ! git checkout $branch; then
+            if ! git checkout "$branch"; then
                 error "Failed to checkout $branch branch for $submodule"
                 return 1
             fi
 
             debug "Merging origin/$branch..."
-            if ! git merge --ff-only origin/$branch; then
+            if ! git merge --ff-only "origin/$branch"; then
                 error "Failed to merge origin/$branch for $submodule. You may need to resolve conflicts manually."
                 return 1
-            fi
-
-            # Apply stashed changes if any
-            if git stash list | grep -q 'stash@{0}'; then
-                warn "Applying stashed changes for $submodule..."
-                git stash pop
             fi
 
             log "Successfully updated $submodule"
@@ -118,6 +125,26 @@ setup_logging() {
     fi
 }
 
+# Function to install Node.js dependencies
+install_node_dependencies() {
+    local module=$1
+    log "Installing Node.js dependencies for $module..."
+    if [ -f "apps/$module/package.json" ]; then
+        (
+            cd "apps/$module" || {
+                error "Failed to change directory to apps/$module"
+                exit 1
+            }
+            if ! npm install; then
+                error "Failed to install Node.js dependencies for $module"
+                return 1
+            fi
+        )
+    else
+        warn "package.json not found in $module directory. Skipping Node.js setup."
+    fi
+}
+
 # Main setup process
 main() {
     log "Setting up Dullahan project..."
@@ -136,12 +163,12 @@ main() {
     update_submodule "tracker"
     setup_submodule "tracker"
 
-    update_submodule "proxy" "dev"
     setup_submodule "proxy"
+    install_node_dependencies "proxy"
 
-    if [ -d "apps/orchestrator" ]; then
-        update_submodule "orchestrator"
-        setup_submodule "orchestrator"
+    if [ -d "apps/orch" ]; then
+        setup_submodule "orch"
+        install_node_dependencies "orch"
     else
         warn "Orchestrator submodule not found. Skipping."
     fi
@@ -149,10 +176,38 @@ main() {
     log "Dullahan project setup complete!"
 }
 
-# Check for debug flag
-if [ "$1" = "--debug" ]; then
-    DEBUG=true
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+    --debug)
+        DEBUG=true
+        shift
+        ;;
+    --force-update)
+        FORCE_UPDATE=true
+        shift
+        ;;
+    --skip-update)
+        SKIP_UPDATE=true
+        shift
+        ;;
+    *)
+        error "Unknown option: $1"
+        exit 1
+        ;;
+    esac
+done
+
+if [ "$DEBUG" = true ]; then
     debug "Debug mode enabled"
+fi
+
+if [ "$FORCE_UPDATE" = true ]; then
+    warn "Force update mode enabled. This may overwrite local changes."
+fi
+
+if [ "$SKIP_UPDATE" = true ]; then
+    warn "Skip update mode enabled. Submodules will not be updated."
 fi
 
 # Run the main setup process

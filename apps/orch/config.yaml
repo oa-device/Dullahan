@@ -1,0 +1,22 @@
+trackers:
+  - url: "http://localhost:8000"
+  - url: "http://localhost:8001"
+
+proxy:
+  url: "http://localhost:3001"
+
+observation_types:
+  - "crowd"
+  - "doors"
+  - "views"
+  - "waiting_time"
+  - "objects"
+
+# Health check configuration
+health_check:
+  interval: 30 # Check every 30 seconds
+  timeout: 5 # Wait up to 5 seconds for a response
+  retries: 3 # Retry 3 times before considering the service unhealthy
+
+# Orchestrator port
+port: 3000

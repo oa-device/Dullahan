@@ -28,18 +28,19 @@ Dullahan consists of three main components:
    - HTTP API for data access
    - Runs as a native Python application
 
-2. **Proxy Cache** (Docker container)
+2. **Orchestrator** (Docker container)
 
+   - Central management for multiple trackers
+   - Data flow coordination
+   - System-wide optimization
+   - Forwards observations from trackers to the proxy
+
+3. **Proxy Cache** (Docker container)
    - Manages network interruptions
    - Request caching and auto-resend
    - 5-minute network check interval
    - Handles Cloud Integration
    - HTTP/HTTPS data transmission to cloud services
-
-3. **Orchestrator** (Docker container)
-   - Central management for multiple trackers
-   - Data flow coordination
-   - System-wide optimization
 
 ## Prerequisites
 
@@ -53,38 +54,44 @@ Dullahan consists of three main components:
 1. Clone the repository:
 
    ```bash
-   # Clone the repository
    git clone <repository_url> dullahan
-
-   # Navigate to the project directory
    cd dullahan
    ```
 
-2. Set up the tracker module:
+2. Set up the all modules:
 
    ```bash
-   cd apps/tracker
-   ./setup.sh
+   ./scripts/setup.sh
    ```
 
-3. Build and start the Docker containers for orchestrator and proxy:
+3. Build the Docker images for orchestrator and proxy:
 
    ```bash
-   cd ../..
-   docker-compose up --build orchestrator proxy
+   docker-compose build orchestrator proxy
    ```
 
 ## Configuration
 
-Edit the `config.yaml` file in the project root directory to customize settings. The Docker containers and the tracker module will use this configuration file.
+The `config.yaml` file in the project root directory is used to customize settings for all components (tracker, orchestrator, and proxy). This file is shared between the native tracker application and the Docker containers.
+
+Example configuration:
 
 ```yaml
 cloud:
   url: "https://7pyzcafao6.execute-api.ca-central-1.amazonaws.com"
 
 trackers:
-  count: 2
-  model: "yolov8n.pt"
+  - name: "Tracker 1"
+    url: "http://localhost:8000"
+  - name: "Tracker 2"
+    url: "http://localhost:8001"
+
+orchestrator:
+  port: 3000
+
+proxy:
+  url: "http://localhost:3001"
+  port: 3001
 
 video_sources:
   - name: "Camera 1"
@@ -111,15 +118,17 @@ observation_types:
 
 To start the Dullahan system:
 
-1. Start the tracker module:
+1. Start the tracker module(s):
 
    ```bash
    cd apps/tracker
    source venv/bin/activate
-   python main.py
+   python tracker.py
    ```
 
-2. In a new terminal, start the Docker containers:
+   Repeat this step for each tracker, using different ports as configured in `config.yaml`.
+
+2. In a new terminal, start the Docker containers for orchestrator and proxy:
 
    ```bash
    docker-compose up orchestrator proxy
@@ -127,7 +136,7 @@ To start the Dullahan system:
 
 To stop the system:
 
-1. Stop the tracker module by pressing Ctrl+C in its terminal.
+1. Stop the tracker module(s) by pressing Ctrl+C in their terminals.
 2. Stop the Docker containers:
 
    ```bash
@@ -297,10 +306,10 @@ This example shows how multiple observations can be sent in a single request, de
 
 ## Docker Setup
 
-The project uses Docker to containerize the orchestrator and proxy components. The `docker` directory contains subdirectories for these components:
+The project uses Docker to containerize the orchestrator and proxy components. The `apps` directory contains subdirectories for these components:
 
-- `docker/proxy`: Dockerfile and related files for the Proxy Cache component
-- `docker/orchestrator`: Dockerfile and related files for the Orchestrator component
+- `apps/orch`: Dockerfile and related files for the Orchestrator component
+- `apps/proxy`: Dockerfile and related files for the Proxy Cache component
 
 The `docker-compose.yml` file in the root directory defines the multi-container Docker application for these components.
 

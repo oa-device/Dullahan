@@ -1,25 +1,24 @@
 {
-  "name": "cache_proxy",
+  "name": "dullahan-proxy",
   "version": "1.0.0",
+  "description": "Proxy module for the Dullahan project",
   "main": "proxy.js",
   "scripts": {
-    "test": "mocha test/**/*.js"
+    "start": "node proxy.js",
+    "test": "mocha test/test.js"
   },
-  "keywords": [],
-  "author": "Edouard Boily",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "axios": "^1.7.7",
-    "commander": "^12.1.0",
     "express": "^4.21.0",
-    "jest": "^29.7.0",
-    "ping": "^0.4.4"
+    "axios": "^1.7.7",
+    "ping": "^0.4.4",
+    "nock": "^13.5.5",
+    "commander": "^12.1.0",
+    "winston": "^3.14.2",
+    "yaml": "^2.5.1"
   },
   "devDependencies": {
-    "chai": "^4.5.0",
     "mocha": "^10.7.3",
-    "nock": "^13.5.5",
+    "chai": "^5.1.1",
     "supertest": "^7.0.0"
   }
 }

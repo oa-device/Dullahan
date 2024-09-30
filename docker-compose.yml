@@ -1,0 +1,32 @@
+services:
+  orchestrator:
+    build:
+      context: ./apps/orch
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config.yaml:/usr/src/app/config.yaml
+    depends_on:
+      - proxy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - dullahan_network
+
+  proxy:
+    build:
+      context: ./apps/proxy
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./config.yaml:/usr/src/app/config.yaml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - dullahan_network
+
+networks:
+  dullahan_network:
+    driver: bridge
