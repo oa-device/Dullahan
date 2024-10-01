@@ -7,6 +7,7 @@
 - [ ] Create Dockerfile for Orchestrator component
 - [ ] Develop docker-compose.yml for Proxy Cache and Orchestrator
 - [x] Update setup.sh script to include both native Python and Docker setup
+- [x] Enhance setup.sh script with new command-line options (--debug, --force-update, --skip-update)
 - [ ] Create .dockerignore files for Docker components
 - [ ] Set up networking between native Tracker and Docker containers
 
@@ -66,6 +67,7 @@
 - [ ] Implement system-wide tests using both native Python and docker-compose
 - [ ] Set up CI/CD pipeline with support for both native and Docker components
 - [ ] Implement automated testing for different configurations
+- [ ] Create tests for new setup.sh script options (--debug, --force-update, --skip-update)
 
 ## 9. Documentation Updates
 
@@ -75,6 +77,7 @@
 - [ ] Write developer guidelines for working with both native Python and Docker in this project
 - [ ] Document installation and setup process for hybrid deployment
 - [ ] Create troubleshooting guide for common issues in the hybrid setup
+- [ ] Create detailed documentation for setup.sh script options and their use cases
 
 ## 10. Performance Optimization
 

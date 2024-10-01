@@ -63,16 +63,37 @@ Dullahan consists of three main components:
 2. Set up all modules:
 
    ```bash
-   ./scripts/setup.sh
+   ./scripts/setup.sh [OPTIONS] [TRACKER_OPTIONS]
    ```
 
-3. Install dependencies for orchestrator and proxy:
+   The setup script now supports various options for both the main script and the tracker setup. For more information on available options, run:
 
    ```bash
-   cd apps/orch && npm install
-   cd ../proxy && npm install
-   cd ../..
+   ./scripts/setup.sh --help
    ```
+
+### Setup Script Options
+
+The `setup.sh` script now supports the following options:
+
+- `--debug`: Enable debug mode for the main setup script
+- `--force-update`: Force update submodules, overwriting local changes
+- `--skip-update`: Skip updating submodules
+
+Any additional options will be passed to the tracker's setup script. Common tracker options include:
+
+- `-c, --clean`: Clean up previous installations before setup
+- `-p, --pyenv <option>`: Specify pyenv installation option (skip, update, force)
+- `--force`: Equivalent to --pyenv force
+- `--dry-run`: Perform a dry run without making changes
+- `--no-backup`: Skip creating a backup before making changes
+- `--restore <backup_dir>`: Restore from a specific backup directory
+
+For example, to update pyenv and force a fresh installation while enabling debug mode for the main script:
+
+```bash
+./scripts/setup.sh --debug -p update
+```
 
 ## Configuration
 

@@ -14,6 +14,49 @@ DEBUG=false
 FORCE_UPDATE=false
 SKIP_UPDATE=false
 
+# Array to store arguments for tracker setup
+TRACKER_ARGS=()
+
+# Function to display usage information
+display_usage() {
+    cat << EOF
+Usage: ./setup.sh [OPTIONS] [TRACKER_OPTIONS]
+
+This script sets up the Dullahan project, including its submodules.
+
+OPTIONS:
+  --debug         Enable debug mode for this script
+  --force-update  Force update submodules, overwriting local changes
+  --skip-update   Skip updating submodules
+
+TRACKER_OPTIONS:
+  Any additional options will be passed to the tracker's setup script.
+  Common tracker options include:
+    -h, --help              Display tracker help message and exit
+    -c, --clean             Clean up previous installations before setup
+    -p, --pyenv <option>    Specify pyenv installation option:
+                              skip    - Skip pyenv installation/update (default)
+                              update  - Update existing pyenv installation
+                              force   - Force a fresh pyenv installation
+    --force                 Equivalent to --pyenv force
+    --dry-run               Perform a dry run without making changes
+    --no-backup             Skip creating a backup before making changes
+    --restore <backup_dir>  Restore from a specific backup directory
+
+Examples:
+  ./setup.sh                            # Run setup with default options
+  ./setup.sh --debug                    # Run setup in debug mode
+  ./setup.sh --force-update             # Force update submodules
+  ./setup.sh -p update                  # Update pyenv in tracker setup
+  ./setup.sh --debug -p update --force  # Debug mode, update pyenv, force pyenv installation
+  ./setup.sh --skip-update --dry-run    # Skip updates, dry run tracker setup
+
+For more information on tracker-specific options, run:
+  ./setup.sh -- --help
+
+EOF
+}
+
 # Function to log messages
 log() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -96,6 +139,7 @@ update_submodule() {
 # Function to run setup script for a submodule
 setup_submodule() {
     local submodule=$1
+    shift
     log "Setting up $submodule..."
     if [ -f "apps/$submodule/setup.sh" ]; then
         (
@@ -103,8 +147,8 @@ setup_submodule() {
                 error "Failed to change directory to apps/$submodule"
                 exit 1
             }
-            debug "Running setup.sh for $submodule"
-            if ! bash setup.sh; then
+            debug "Running setup.sh for $submodule with arguments: ${TRACKER_ARGS[*]}"
+            if ! bash setup.sh "${TRACKER_ARGS[@]}"; then
                 error "Failed to run setup.sh for $submodule"
                 return 1
             fi
@@ -179,6 +223,10 @@ main() {
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
+    -h|--help)
+        display_usage
+        exit 0
+        ;;
     --debug)
         DEBUG=true
         shift
@@ -192,8 +240,9 @@ while [[ $# -gt 0 ]]; do
         shift
         ;;
     *)
-        error "Unknown option: $1"
-        exit 1
+        # Add all other arguments to TRACKER_ARGS array
+        TRACKER_ARGS+=("$1")
+        shift
         ;;
     esac
 done
