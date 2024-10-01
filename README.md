@@ -13,7 +13,9 @@ Dullahan is an internal multi-platform video analysis system designed for Mac an
 5. [Usage](#usage)
 6. [Development](#development)
 7. [API Endpoints](#api-endpoints)
-8. [Logging](#logging)
+8. [Proxy Cache Behavior](#proxy-cache-behavior)
+9. [Current Implementation](#current-implementation)
+10. [Logging](#logging)
 
 ## Architecture
 
@@ -30,8 +32,7 @@ Dullahan consists of three main components:
 2. **Orchestrator**
 
    - Central management for multiple trackers
-   - Data flow coordination
-   - System-wide optimization
+   - Collects detection data from trackers every 15 seconds
    - Forwards observations from trackers to the proxy
    - Runs as a native Node.js application
 
@@ -169,6 +170,8 @@ To stop the system:
 
 ## API Endpoints
 
+The following API endpoints serve as guidelines for data posting to the cloud. The current implementation should aim to follow these guidelines as closely as possible.
+
 ### POST /cameras/{id}/observations/{type}
 
 Post observations for a specific camera and observation type. Data should always be sent as arrays to allow for batch processing.
@@ -279,7 +282,9 @@ The request body should always be an array of observation objects, even for sing
 
 Note: Replace "RGQRj2nlCwYvwIIKQY0aV" with your actual camera ID for testing.
 
-### Proxy Cache Behavior
+## Proxy Cache Behavior
+
+The proxy cache behavior described below serves as a guideline that should be followed in the implementation:
 
 If the network isn't available, the request will be saved in `requests.json`. The proxy will check the network every minute by default (configurable in `config.yaml`). When the network is back, all saved requests will be replayed to the cloud.
 
@@ -309,6 +314,59 @@ curl --location 'https://7pyzcafao6.execute-api.ca-central-1.amazonaws.com/camer
 ```
 
 This example shows how multiple observations can be sent in a single request, demonstrating the batch processing capability.
+
+## Current Implementation
+
+The current implementation of Dullahan uses a simplified data flow and structure. Here's an overview of the current system:
+
+### Tracker API
+
+#### GET /detections?from={seconds}
+
+Retrieve detections from the last specified number of seconds.
+
+**URL**: `http://localhost:8000/detections?from=15`
+
+**Method**: `GET`
+
+**Query Parameters**:
+
+- `from`: Number of seconds to look back (e.g., 15)
+
+**Response Body**:
+
+```json
+{
+  "person": 132,
+  "bicycle": 2,
+  "horse": 2,
+  "handbag": 2,
+  "backpack": 4
+}
+```
+
+### Orchestrator
+
+The orchestrator collects data from the tracker(s) every 15 seconds using the `/detections?from=15` endpoint. It then forwards this data to the proxy.
+
+### Proxy
+
+The proxy receives data from the orchestrator and formats it for transmission to the cloud. The current data structure sent to the cloud is:
+
+```json
+{
+  "timestamp": "2023-05-15T14:30:00Z",
+  "detections": {
+    "person": 132,
+    "bicycle": 2,
+    "horse": 2,
+    "handbag": 2,
+    "backpack": 4
+  }
+}
+```
+
+Note: The current implementation is working towards aligning with the guidelines provided in the API Endpoints and Proxy Cache Behavior sections.
 
 ## Logging
 

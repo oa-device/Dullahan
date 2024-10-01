@@ -51,39 +51,18 @@ async function collectTrackerData(retries = 3) {
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      // Get current detections
-      logger.info("Fetching current detections");
-      const currentDetections = await axios.get(`${trackerUrl}/detections`);
-      logger.info(`Current detections: ${JSON.stringify(currentDetections.data)}`);
-      
-      // Get unique object counts for the last 30 seconds
-      logger.info("Fetching unique object counts");
-      const uniqueCounts = await axios.get(`${trackerUrl}/detections?from=30`);
-      logger.info(`Unique counts: ${JSON.stringify(uniqueCounts.data)}`);
-      
-      // Get person count for the last minute
-      logger.info("Fetching person count");
-      const now = Date.now();
-      const personCount = await axios.get(`${trackerUrl}/cam/collect`, {
-        params: {
-          from: now - 60000, // 60 seconds ago
-          to: now,
-          cam: 0
-        }
-      });
-      logger.info(`Person count: ${JSON.stringify(personCount.data)}`);
+      // Get detections from the last 15 seconds
+      logger.info("Fetching detections from the last 15 seconds");
+      const response = await axios.get(`${trackerUrl}/detections?from=15`);
+      const detections = response.data;
+      logger.info(`Detections: ${JSON.stringify(detections)}`);
 
-      // Organize the collected data
-      const organizedData = {
-        timestamp: new Date().toISOString(),
-        currentDetections: currentDetections.data,
-        uniqueCounts: uniqueCounts.data,
-        personCount: personCount.data
-      };
+      // Format data for the proxy
+      const formattedData = formatDataForProxy(detections);
 
-      // Send organized data to proxy
-      logger.info("Sending organized data to proxy");
-      await sendToProxy(organizedData);
+      // Send data to proxy
+      logger.info("Sending formatted data to proxy");
+      await sendToProxy(formattedData);
 
       logger.info("Successfully collected and sent tracker data to proxy");
       return; // Exit the function if successful
@@ -97,28 +76,45 @@ async function collectTrackerData(retries = 3) {
         logger.error("Max retries reached. Failed to collect tracker data.");
       } else {
         logger.info(`Retrying in 5 seconds...`);
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retrying
+        await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait 5 seconds before retrying
       }
     }
   }
+}
+
+// Function to format data for the proxy
+function formatDataForProxy(detections) {
+  const timestamp = new Date().toISOString();
+  return [{
+    ts: Date.now(),
+    ...detections
+  }];
 }
 
 // Function to send data to proxy
 async function sendToProxy(data) {
   try {
     const proxyUrl = config.proxy.url;
-    await axios.post(`${proxyUrl}/data`, data, {
+    const cameraId = config.trackers[0].id || "RGQRj2nlCwYvwIIKQY0aV"; // Use the specific camera ID
+    logger.info(`Sending data to proxy: ${proxyUrl}/cameras/${cameraId}/observations/objects`);
+    logger.info(`Data being sent: ${JSON.stringify(data)}`);
+    const response = await axios.post(`${proxyUrl}/cameras/${cameraId}/observations/objects`, data, {
       headers: {
         "Content-Type": "application/json",
       },
     });
-    logger.info("Data sent to proxy successfully");
+    logger.info(`Data sent to proxy successfully. Response: ${JSON.stringify(response.data)}`);
   } catch (error) {
     logger.error(`Error sending data to proxy: ${error.message}`);
     if (error.response) {
       logger.error(`Response status: ${error.response.status}`);
       logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
+    } else if (error.request) {
+      logger.error(`No response received: ${error.request}`);
+    } else {
+      logger.error(`Error setting up request: ${error.message}`);
     }
+    throw error;
   }
 }
 
@@ -156,11 +152,11 @@ async function checkOrchestratorHealth() {
 // Check tracker health based on the interval in the config
 setInterval(checkTrackerHealth, config.health_check.interval * 1000);
 
-// Check orchestrator health every 5 minutes
-setInterval(checkOrchestratorHealth, 5 * 60 * 1000);
+// Check orchestrator health every 1 minute
+setInterval(checkOrchestratorHealth, 60 * 1000);
 
-// Collect tracker data every minute
-setInterval(collectTrackerData, 60 * 1000);
+// Collect tracker data every 15 seconds
+setInterval(collectTrackerData, 15 * 1000);
 
 // Initial health checks and data collection with delay
 setTimeout(() => {
