@@ -1,5 +1,7 @@
 # Custom ignore patterns
-requests.json
+
+# Specific file exclusion
+apps/proxy/requests.json
 
 # General
 .DS_Store
