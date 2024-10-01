@@ -94,7 +94,7 @@ app.post("/toggle-mock-cloud", (req, res) => {
 });
 
 async function sendToCloud(cameraId, observationType, data) {
-  if (!isCloudAvailable) {
+  if (!isCloudAvailable && !config.useMockCloud) {
     throw new Error("Cloud is not available");
   }
 
@@ -157,16 +157,32 @@ async function checkConnectivity() {
     logger.info("Mock cloud is always available");
   } else {
     try {
-      await axios.get(`${config.realCloudUrl}/health`);
-      isCloudAvailable = true;
-      logger.info("Real cloud is reachable");
+      const testData = [{ test: "connectivity" }]; // Wrap the test object in an array
+      const testCameraId = "RGQRj2nlCwYvwIIKQY0aV"; // Using a known valid camera ID
+      const response = await axios.post(`${config.realCloudUrl}/cameras/${testCameraId}/observations/objects`, testData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        timeout: 5000, // 5 seconds timeout
+      });
+      isCloudAvailable = response.status === 200;
+      logger.info(`Real cloud is reachable. Status: ${response.status}`);
+      logger.info(`Response data: ${JSON.stringify(response.data)}`);
     } catch (error) {
       isCloudAvailable = false;
-      logger.warn("Real cloud is not reachable");
+      logger.warn(`Real cloud is not reachable: ${error.message}`);
+      if (error.response) {
+        logger.warn(`Response status: ${error.response.status}`);
+        logger.warn(`Response data: ${JSON.stringify(error.response.data)}`);
+      } else if (error.request) {
+        logger.warn(`No response received: ${error.request}`);
+      } else {
+        logger.warn(`Error setting up request: ${error.message}`);
+      }
     }
   }
 
-  if (isCloudAvailable) {
+  if (isCloudAvailable && !config.useMockCloud) {
     logger.info("Attempting to send cached requests");
     await sendCachedRequests();
   }
