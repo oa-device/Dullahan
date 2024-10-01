@@ -9,7 +9,7 @@ suppress_output() {
 echo "Starting tracker(s)..."
 cd apps/tracker
 suppress_output source .venv/bin/activate
-suppress_output python tracker.py &
+suppress_output python tracker.py --trackAll &
 cd ../..
 
 # Start orchestrator and proxy containers

@@ -44,34 +44,83 @@ app.get("/health", (req, res) => {
   res.status(200).json({ status: "OK" });
 });
 
-// Handle observations from trackers and forward to proxy
-app.post("/cameras/:id/observations/:type", async (req, res) => {
-  const { id, type } = req.params;
-  const observations = req.body;
+// Function to collect data from tracker with retries
+async function collectTrackerData(retries = 3) {
+  logger.info("Starting to collect data from tracker");
+  const trackerUrl = config.trackers[0].url; // Assuming we're using the first tracker
 
-  if (!Array.isArray(observations)) {
-    return res.status(400).json({ error: "Observations must be an array" });
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      // Get current detections
+      logger.info("Fetching current detections");
+      const currentDetections = await axios.get(`${trackerUrl}/detections`);
+      logger.info(`Current detections: ${JSON.stringify(currentDetections.data)}`);
+      
+      // Get unique object counts for the last 30 seconds
+      logger.info("Fetching unique object counts");
+      const uniqueCounts = await axios.get(`${trackerUrl}/detections?from=30`);
+      logger.info(`Unique counts: ${JSON.stringify(uniqueCounts.data)}`);
+      
+      // Get person count for the last minute
+      logger.info("Fetching person count");
+      const now = Date.now();
+      const personCount = await axios.get(`${trackerUrl}/cam/collect`, {
+        params: {
+          from: now - 60000, // 60 seconds ago
+          to: now,
+          cam: 0
+        }
+      });
+      logger.info(`Person count: ${JSON.stringify(personCount.data)}`);
+
+      // Organize the collected data
+      const organizedData = {
+        timestamp: new Date().toISOString(),
+        currentDetections: currentDetections.data,
+        uniqueCounts: uniqueCounts.data,
+        personCount: personCount.data
+      };
+
+      // Send organized data to proxy
+      logger.info("Sending organized data to proxy");
+      await sendToProxy(organizedData);
+
+      logger.info("Successfully collected and sent tracker data to proxy");
+      return; // Exit the function if successful
+    } catch (error) {
+      logger.error(`Error collecting tracker data (attempt ${attempt}/${retries}): ${error.message}`);
+      if (error.response) {
+        logger.error(`Response status: ${error.response.status}`);
+        logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
+      }
+      if (attempt === retries) {
+        logger.error("Max retries reached. Failed to collect tracker data.");
+      } else {
+        logger.info(`Retrying in 5 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retrying
+      }
+    }
   }
+}
 
-  if (!config.observation_types.includes(type)) {
-    return res.status(400).json({ error: "Invalid observation type" });
-  }
-
+// Function to send data to proxy
+async function sendToProxy(data) {
   try {
     const proxyUrl = config.proxy.url;
-    const response = await axios.post(`${proxyUrl}/cameras/${id}/observations/${type}`, observations, {
+    await axios.post(`${proxyUrl}/data`, data, {
       headers: {
         "Content-Type": "application/json",
       },
     });
-
-    logger.info(`Forwarded ${type} observations for camera ${id} to proxy`);
-    res.status(response.status).json(response.data);
+    logger.info("Data sent to proxy successfully");
   } catch (error) {
-    logger.error(`Error forwarding observations to proxy: ${error.message}`);
-    res.status(500).json({ error: "Failed to forward observations to proxy" });
+    logger.error(`Error sending data to proxy: ${error.message}`);
+    if (error.response) {
+      logger.error(`Response status: ${error.response.status}`);
+      logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
+    }
   }
-});
+}
 
 // Start the server
 app.listen(port, () => {
@@ -110,7 +159,15 @@ setInterval(checkTrackerHealth, config.health_check.interval * 1000);
 // Check orchestrator health every 5 minutes
 setInterval(checkOrchestratorHealth, 5 * 60 * 1000);
 
-// Initial health checks
-logger.info("Performing initial health checks");
-checkTrackerHealth();
-checkOrchestratorHealth();
+// Collect tracker data every minute
+setInterval(collectTrackerData, 60 * 1000);
+
+// Initial health checks and data collection with delay
+setTimeout(() => {
+  logger.info("Performing initial health checks and data collection");
+  checkTrackerHealth();
+  checkOrchestratorHealth();
+  collectTrackerData();
+}, 10000); // Wait for 10 seconds before starting
+
+logger.info("Orchestrator initialized. Waiting 10 seconds before starting health checks and data collection.");

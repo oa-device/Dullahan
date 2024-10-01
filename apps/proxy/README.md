@@ -1,4 +1,4 @@
-# README.md
+# Proxy
 
 ## Table of Contents
 
@@ -6,34 +6,30 @@
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Functionality](#functionality)
 - [API Endpoints](#api-endpoints)
-- [Implementation Details](#implementation-details)
-- [Test](#test)
+- [Configuration](#configuration)
+- [Logging](#logging)
+- [Testing Features](#testing-features)
 
 ## Overview
 
-`proxy.js` is a Node.js application designed to handle incoming HTTP POST requests, forward them to a specified URL, and cache the requests if the forwarding fails due to network issues. The application periodically checks for network connectivity and retries sending the cached requests.
+The Proxy is a crucial component of the Dullahan project, acting as an intermediary between the Orchestrator and the cloud storage. It receives data from the Orchestrator, attempts to send it to the cloud, and implements a caching mechanism to handle scenarios where the cloud is temporarily unavailable.
 
 ## Prerequisites
 
-- Node.js
+- Node.js (v12 or higher recommended)
 - npm (Node Package Manager)
 
 ## Installation
 
-1. Clone the repository:
+1. Navigate to the proxy directory:
 
    ```sh
-   git clone <repository_url>
+   cd apps/proxy
    ```
 
-2. Navigate to the project directory:
-
-   ```sh
-   cd <project_directory>
-   ```
-
-3. Install the dependencies:
+2. Install the dependencies:
 
    ```sh
    npm install
@@ -41,146 +37,112 @@
 
 ## Usage
 
-1. Start the server:
+To start the Proxy:
 
-   ```sh
-   node proxy.js
-   ```
+```sh
+node proxy.js
+```
 
-2. The server will run on port 3000 by default. You can specify a different port by setting the `PORT` environment variable.
+The Proxy will start and listen on the configured port (default is 3001).
+
+## Functionality
+
+The Proxy performs several key functions:
+
+1. **Data Reception**: Receives data from the Orchestrator through a POST endpoint.
+
+2. **Cloud Communication**: Attempts to send received data to the cloud storage.
+
+3. **Data Caching**: If cloud storage is unavailable, caches the data locally for later transmission.
+
+4. **Periodic Connectivity Checks**: Regularly checks cloud connectivity and attempts to send cached data when the cloud becomes available.
+
+5. **Logging**: Maintains detailed logs of its operations, errors, and important events.
 
 ## API Endpoints
 
 ### POST /data
 
-**Description**: Receives data and attempts to forward it to the specified URL.
+**Description**: Receives data from the Orchestrator and attempts to send it to the cloud.
 
-**Query Parameters**:
-
-- `url` (string): The target URL to forward the request to. This parameter is required.
-- Any other query parameters received will also be forwarded or cached for resending.
-
-**Request Headers**:
-
-- All headers received will be forwarded or cached for resending.
-
-**Request Body**:
-
-- JSON payload to be forwarded.
+**Request Body**: JSON payload containing the data to be sent to the cloud.
 
 **Responses**:
 
-- `200 OK`: Request forwarded successfully.
-- `200 OK`: Failed to forward request, saved for later retry.
-- `400 Bad Request`: URL is required.
+- `200 OK`: Data sent to cloud successfully.
+- `202 Accepted`: Data cached for later sending (when cloud is unavailable).
 
-### POST /network
+### GET /health
 
-**Description**: Activates or deactivates `nock` for the specified URL.
+**Description**: Health check endpoint for the Proxy.
 
-**Query Parameters**:
+**Response**:
 
-- `nock` (string): The URL to activate `nock` for. Causes all POST requests to this URL to succeed with a "Failed to forward request, saved for later retry.".
-- `unnock` (string): The URL to deactivate `nock` for.
+- `200 OK` with JSON body `{ status: "OK" }` if the Proxy is healthy.
 
-**Responses**:
+### POST /toggle-cloud (For Testing)
 
-- `200 OK`: `Nock` activated/deactivated for the specified URL.
-- `400 Bad Request`: Query parameter `nock` or `unnock` is required.
+**Description**: Toggles the availability of the mock cloud storage.
+
+**Response**:
+
+- `200 OK` with JSON body indicating the new cloud availability status.
+
+### GET /view-cloud (For Testing)
+
+**Description**: Retrieves the contents of the mock cloud storage.
+
+**Response**:
+
+- `200 OK` with JSON body containing the mock cloud storage data.
+
+## Configuration
+
+The Proxy uses environment variables for configuration:
+
+- `PROXY_PORT`: The port on which the Proxy server will run (default: 3001)
+- `NODE_ENV`: Set to 'production' to disable console logging
+
+## Logging
+
+The Proxy uses Winston for logging. Logs are written to:
+
+- `error.log`: For error-level logs
+- `combined.log`: For all log levels
+
+In non-production environments, logs are also output to the console.
 
 ## Implementation Details
 
-### Dependencies
+### Data Flow
 
-- `express`: Web framework for Node.js.
-- `axios`: HTTP client for making requests.
-- `fs`: File system module for reading and writing files.
-- `path`: Module for handling file paths.
-- `ping`: Utility to check network connectivity.
-- `nock`: HTTP mocking and expectations library.
+1. The Proxy receives data from the Orchestrator via the `/data` endpoint.
+2. It attempts to send this data to the cloud immediately.
+3. If sending fails (e.g., cloud is unavailable), the data is cached locally in a JSON file.
+4. Every minute, the Proxy checks cloud connectivity and attempts to send any cached data.
 
-### File Structure
+### Caching Mechanism
 
-- `proxy.js`: Main application file.
-- `requests.json`: JSON file used to cache failed requests.
+- Cached requests are stored in a `requests.json` file.
+- When cloud connectivity is restored, the Proxy attempts to send all cached requests.
+- Successfully sent requests are removed from the cache.
 
-### Functions
+### Mock Cloud Storage
 
-#### forwardRequest(url, data, headers, queryParams)
+For testing and development purposes, the Proxy implements a mock cloud storage:
 
-- Forwards the request to the specified URL using Axios with headers and query parameters.
+- An in-memory array simulates cloud storage.
+- Cloud availability can be toggled for testing error scenarios.
+- The contents of the mock cloud can be viewed via an API endpoint.
 
-#### saveRequest(url, data, headers, queryParams)
+## Testing Features
 
-- Saves the request data, headers, and query parameters to `requests.json` for later retry if forwarding fails.
+The Proxy includes features to facilitate testing:
 
-#### checkConnectivity()
+1. **Toggle Cloud Availability**: Use the `/toggle-cloud` endpoint to simulate cloud outages and recoveries.
+2. **View Mock Cloud Data**: Use the `/view-cloud` endpoint to inspect data that has been successfully "sent" to the cloud.
+3. **Configurable Check Interval**: The `CHECK_INTERVAL` constant in the code can be adjusted to change how frequently the Proxy checks for cloud connectivity and attempts to send cached data.
 
-- Checks network connectivity by pinging `google.com`. If the network is available, it calls `resendRequests()`.
+## Note on Traditional Approach
 
-#### resendRequests()
-
-- Reads cached requests from `requests.json` and attempts to resend them.
-
-### Network Connectivity Check
-
-- The application checks network connectivity every 5 minutes and attempts to resend any cached requests if the network is available.
-
-## Test
-
-To ensure the functionality of the application, we have included a set of automated tests. These tests cover various scenarios for the `/data` and `/network` endpoints. Below are the steps to run the tests and a brief overview of what each test does.
-
-### Running the Tests
-
-1. **Install the Development Dependencies:**
-   Ensure you have the necessary testing libraries installed.
-
-   ```sh
-   npm install mocha chai nock supertest --save-dev
-   ```
-
-2. **Run the Tests:**
-   Execute the tests using Mocha.
-
-   ```sh
-   npx mocha test/test.js
-   ```
-
-### Test Scenarios
-
-Tests aren't working yet. Don't consider this section.
-
-#### POST /data
-
-1. **Successful Forwarding:**
-
-   - Test to verify that a request is forwarded successfully to the target URL.
-   - Mock the target URL using `nock` to simulate a successful response.
-   - Validate that the response status is `200 OK` and the response message is "Request forwarded successfully".
-
-2. **Forwarding Failure:**
-
-   - Test to ensure that a request is saved if forwarding fails.
-   - Mock the target URL using `nock` to simulate a network failure.
-   - Validate that the response status is `500 Internal Server Error` and the response message is "Failed to forward request, saved for later retry".
-   - Confirm that the request details are saved in the `requests.json` file.
-
-3. **Missing URL Parameter:**
-   - Test to verify that the endpoint returns a `400 Bad Request` status if the `url` query parameter is missing.
-   - Validate that the response message is "URL is required".
-
-#### POST /network
-
-1. **Activate Nock:**
-
-   - Test to activate `nock` for a specified URL.
-   - Validate that the response status is `200 OK` and the response message indicates that `nock` is activated for the specified URL.
-
-2. **Deactivate Nock:**
-
-   - Test to deactivate `nock` for a specified URL.
-   - Validate that the response status is `200 OK` and the response message indicates that `nock` is deactivated for the specified URL.
-
-3. **Missing Nock/Unnock Parameter:**
-   - Test to verify that the endpoint returns a `400 Bad Request` status if neither `nock` nor `unnock` query parameters are provided.
-   - Validate that the response message is "Query parameter nock or unnock is required".
+Currently, the Proxy is designed to run directly on the host system without Docker containerization. This traditional approach allows for easier setup and debugging during the initial development phases. Future versions may incorporate Docker for improved deployment and scalability.

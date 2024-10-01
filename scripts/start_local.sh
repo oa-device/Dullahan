@@ -75,7 +75,7 @@ start_tracker() {
     exit 1
   fi
 
-  python tracker.py >../../logs/tracker.log 2>&1 &
+  python tracker.py --trackAll >../../logs/tracker.log 2>&1 &
   TRACKER_PID=$!
   log "Tracker started with PID $TRACKER_PID"
   cd ../..

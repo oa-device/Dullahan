@@ -2,7 +2,7 @@
 
 ## Overview
 
-Dullahan is an internal multi-platform video analysis system designed for Mac and Ubuntu, leveraging YOLO-based object detection to process multiple video streams in real-time. It builds upon the existing oaTracker project, focusing on local data processing to respect privacy by not uploading or storing images in the cloud. The project uses a hybrid approach, with the tracker module running as a native Python application and the orchestrator and proxy components containerized using Docker for improved consistency and easier deployment.
+Dullahan is an internal multi-platform video analysis system designed for Mac and Ubuntu, leveraging YOLO-based object detection to process multiple video streams in real-time. It builds upon the existing oaTracker project, focusing on local data processing to respect privacy by not uploading or storing images in the cloud. The project uses a traditional approach, with all components (tracker, orchestrator, and proxy) running as native applications for easier setup and debugging during the initial development phases.
 
 ## Table of Contents
 
@@ -13,8 +13,7 @@ Dullahan is an internal multi-platform video analysis system designed for Mac an
 5. [Usage](#usage)
 6. [Development](#development)
 7. [API Endpoints](#api-endpoints)
-8. [Docker Setup](#docker-setup)
-9. [Logging](#logging)
+8. [Logging](#logging)
 
 ## Architecture
 
@@ -28,25 +27,27 @@ Dullahan consists of three main components:
    - HTTP API for data access
    - Runs as a native Python application
 
-2. **Orchestrator** (Docker container)
+2. **Orchestrator**
 
    - Central management for multiple trackers
    - Data flow coordination
    - System-wide optimization
    - Forwards observations from trackers to the proxy
+   - Runs as a native Node.js application
 
-3. **Proxy Cache** (Docker container)
+3. **Proxy Cache**
    - Manages network interruptions
    - Request caching and auto-resend
-   - 5-minute network check interval
+   - 1-minute network check interval (configurable)
    - Handles Cloud Integration
    - HTTP/HTTPS data transmission to cloud services
+   - Runs as a native Node.js application
 
 ## Prerequisites
 
 - Python 3.10
-- Docker
-- Docker Compose
+- Node.js (v12 or higher recommended)
+- npm (Node Package Manager)
 - Git
 
 ## Installation
@@ -58,21 +59,23 @@ Dullahan consists of three main components:
    cd dullahan
    ```
 
-2. Set up the all modules:
+2. Set up all modules:
 
    ```bash
    ./scripts/setup.sh
    ```
 
-3. Build the Docker images for orchestrator and proxy:
+3. Install dependencies for orchestrator and proxy:
 
    ```bash
-   docker-compose build orchestrator proxy
+   cd apps/orch && npm install
+   cd ../proxy && npm install
+   cd ../..
    ```
 
 ## Configuration
 
-The `config.yaml` file in the project root directory is used to customize settings for all components (tracker, orchestrator, and proxy). This file is shared between the native tracker application and the Docker containers.
+The `config.yaml` file in the project root directory is used to customize settings for all components (tracker, orchestrator, and proxy). This file is shared between all applications.
 
 Example configuration:
 
@@ -103,7 +106,7 @@ video_sources:
 
 proxy_cache:
   enabled: true
-  check_interval: 300
+  check_interval: 60
 
 observation_types:
   - "crowd"
@@ -123,32 +126,35 @@ To start the Dullahan system:
    ```bash
    cd apps/tracker
    source venv/bin/activate
-   python tracker.py
+   python tracker.py --trackAll # To track all objects
    ```
 
    Repeat this step for each tracker, using different ports as configured in `config.yaml`.
 
-2. In a new terminal, start the Docker containers for orchestrator and proxy:
+2. In a new terminal, start the orchestrator:
 
    ```bash
-   docker-compose up orchestrator proxy
+   cd apps/orch
+   node orchestrator.js
+   ```
+
+3. In another terminal, start the proxy:
+
+   ```bash
+   cd apps/proxy
+   node proxy.js
    ```
 
 To stop the system:
 
-1. Stop the tracker module(s) by pressing Ctrl+C in their terminals.
-2. Stop the Docker containers:
-
-   ```bash
-   docker-compose down
-   ```
+1. Stop each component by pressing Ctrl+C in their respective terminals.
 
 ## Development
 
 ### Workflow
 
 1. Implement the tracker component as a native Python application
-2. Develop the orchestrator and proxy components within their respective Docker containers
+2. Develop the orchestrator and proxy components as native Node.js applications
 3. Ensure cross-platform compatibility for each module
 4. Integrate components following the system diagram
 5. Implement comprehensive testing for the entire system
@@ -159,7 +165,7 @@ To stop the system:
 1. Enhance oaTracker for Dullahan integration within the tracker module
 2. Develop Proxy Cache with robust error handling, caching, and cloud integration
 3. Create Orchestrator for multi-tracker management
-4. Ensure seamless communication between the native tracker and containerized components
+4. Ensure seamless communication between all components
 
 ## API Endpoints
 
@@ -275,7 +281,7 @@ Note: Replace "RGQRj2nlCwYvwIIKQY0aV" with your actual camera ID for testing.
 
 ### Proxy Cache Behavior
 
-If the network isn't available, the request will be saved in `requests.json`. The proxy will check the network every 5 minutes. When the network is back, all saved requests will be replayed to the cloud.
+If the network isn't available, the request will be saved in `requests.json`. The proxy will check the network every minute by default (configurable in `config.yaml`). When the network is back, all saved requests will be replayed to the cloud.
 
 Example of a cached request:
 
@@ -304,53 +310,26 @@ curl --location 'https://7pyzcafao6.execute-api.ca-central-1.amazonaws.com/camer
 
 This example shows how multiple observations can be sent in a single request, demonstrating the batch processing capability.
 
-## Docker Setup
-
-The project uses Docker to containerize the orchestrator and proxy components. The `apps` directory contains subdirectories for these components:
-
-- `apps/orch`: Dockerfile and related files for the Orchestrator component
-- `apps/proxy`: Dockerfile and related files for the Proxy Cache component
-
-The `docker-compose.yml` file in the root directory defines the multi-container Docker application for these components.
-
-To build the Docker images:
-
-```bash
-docker-compose build orchestrator proxy
-```
-
-To start the containers:
-
-```bash
-docker-compose up orchestrator proxy
-```
-
-To stop and remove the containers:
-
-```bash
-docker-compose down
-```
-
 ## Logging
 
-Dullahan uses a universal logging system that works across all components, including the native tracker application and Docker containers. Logs are collected from each component and can be viewed using appropriate tools.
+Dullahan uses a universal logging system that works across all components. Logs are collected from each component and can be viewed using appropriate tools.
 
 For the tracker module:
 
 - Logs are written to a file specified in the configuration
 
-For Docker containers:
+For the orchestrator and proxy:
+
+- Logs are written to `error.log` and `combined.log` files in their respective directories
+- In non-production environments, logs are also output to the console
+
+To view logs for a specific component, you can use standard command-line tools like `tail` or `cat`:
 
 ```bash
-docker-compose logs
-```
-
-To view logs for a specific container:
-
-```bash
-docker-compose logs [proxy|orchestrator]
+tail -f apps/orch/combined.log
+tail -f apps/proxy/combined.log
 ```
 
 For more detailed logging information, refer to the logging documentation in each component's respective directory.
 
-This hybrid setup ensures consistent logging across all components of the Dullahan project, regardless of whether they are containerized or running natively, and provides easy access to logs for debugging and monitoring purposes.
+This setup ensures consistent logging across all components of the Dullahan project and provides easy access to logs for debugging and monitoring purposes.

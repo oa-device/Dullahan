@@ -1,120 +1,128 @@
-const express = require('express');
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const ping = require('ping');
-const nock = require('nock');
-const { Command } = require('commander');
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
+const winston = require("winston");
 
-// Initialize Commander
-const program = new Command();
-program
-    .option('-p, --port <number>', 'Port to run the server', 3001) // default to 3001
-    .parse(process.argv);
+// Initialize Winston logger
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ timestamp, level, message }) => {
+      return `${timestamp} [${level}]: ${message}`;
+    })
+  ),
+  transports: [
+    new winston.transports.File({ filename: "error.log", level: "error" }),
+    new winston.transports.File({ filename: "combined.log" }),
+  ],
+});
 
-const options = program.opts();
-
-// Set the port using the command-line argument or the default
-const PORT = options.port || process.env.PROXY_PORT || 3001;
+if (process.env.NODE_ENV !== "production") {
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.simple(),
+    })
+  );
+}
 
 const app = express();
 app.use(express.json());
 
-const REQUESTS_FILE = path.join(__dirname, 'requests.json');
-const CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const PORT = process.env.PROXY_PORT || 3001;
+const REQUESTS_FILE = path.join(__dirname, "requests.json");
+const CHECK_INTERVAL = 60 * 1000; // 1 minute for testing purposes
 
-// Initialize the requests file if it doesn't exist
+// Mock cloud storage
+let mockCloudStorage = [];
+let isCloudAvailable = false;
+
+// Initialize the cached requests file if it doesn't exist
 if (!fs.existsSync(REQUESTS_FILE)) {
-    fs.writeFileSync(REQUESTS_FILE, JSON.stringify({}));
+  fs.writeFileSync(REQUESTS_FILE, JSON.stringify([]));
 }
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'OK' });
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "OK" });
 });
 
-app.post('/data', async (req, res) => {
-    const targetUrl = req.query.url;
-    if (!targetUrl) {
-        return res.status(400).send('URL is required');
-    }
-    const payload = req.body;
-    const headers = req.headers;
-    const queryParams = { ...req.query };
-    delete queryParams.url; // Remove the 'url' parameter
+// Endpoint to receive data from orchestrator
+app.post("/data", async (req, res) => {
+  const data = req.body;
+  logger.info("Received data from orchestrator");
 
-    try {
-        await forwardRequest(targetUrl, payload, headers, queryParams);
-        res.status(200).send('Request forwarded successfully');
-    } catch (error) {
-        saveRequest(targetUrl, payload, headers, queryParams);
-        res.status(500).send('Failed to forward request, saved for later retry');
-    }
+  try {
+    await sendToCloud(data);
+    res.status(200).send("Data sent to cloud successfully");
+  } catch (error) {
+    logger.error(`Failed to send data to cloud: ${error.message}`);
+    await cacheRequest(data);
+    res.status(202).send("Data cached for later sending");
+  }
 });
 
-app.post('/network', (req, res) => {
-    const { nock: nockUrl, unnock: unnockUrl } = req.query;
-
-    if (nockUrl) {
-        nock(nockUrl)
-            .post(/.*/)
-            .replyWithError('Network failure');
-        return res.status(200).send(`Nock activated for ${nockUrl}`);
-    }
-
-    if (unnockUrl) {
-        nock.cleanAll();
-        return res.status(200).send(`Nock deactivated for ${unnockUrl}`);
-    }
-
-    res.status(400).send('Query parameter nock or unnock is required');
+// Endpoint to toggle cloud availability (for testing purposes)
+app.post("/toggle-cloud", (req, res) => {
+  isCloudAvailable = !isCloudAvailable;
+  logger.info(`Cloud availability set to: ${isCloudAvailable}`);
+  res.status(200).json({ cloudAvailable: isCloudAvailable });
 });
 
-async function forwardRequest(url, data, headers, queryParams) {
-    const config = {
-        headers,
-        params: queryParams
-    };
-    await axios.post(url, data, config);
+// Endpoint to view mock cloud storage (for testing purposes)
+app.get("/view-cloud", (req, res) => {
+  res.status(200).json(mockCloudStorage);
+});
+
+async function sendToCloud(data) {
+  if (!isCloudAvailable) {
+    throw new Error("Cloud is not available");
+  }
+  mockCloudStorage.push(data);
+  logger.info("Data sent to mock cloud storage");
 }
 
-function saveRequest(url, data, headers, queryParams) {
-    const requests = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf-8'));
-    if (!requests[url]) {
-        requests[url] = [];
-    }
-    requests[url].push({ data, headers, queryParams });
-    fs.writeFileSync(REQUESTS_FILE, JSON.stringify(requests));
+async function cacheRequest(data) {
+  const cachedRequests = JSON.parse(fs.readFileSync(REQUESTS_FILE, "utf-8"));
+  cachedRequests.push(data);
+  fs.writeFileSync(REQUESTS_FILE, JSON.stringify(cachedRequests));
+  logger.info("Data cached for later sending");
 }
 
 async function checkConnectivity() {
-    const isAlive = await ping.promise.probe('google.com');
-    if (isAlive.alive) {
-        resendRequests();
-    }
+  logger.info("Checking cloud connectivity");
+  if (isCloudAvailable) {
+    logger.info("Cloud is reachable. Attempting to send cached requests");
+    await sendCachedRequests();
+  } else {
+    logger.warn("Cloud is not reachable");
+  }
 }
 
-function resendRequests() {
-    const requests = JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf-8'));
-    for (const url in requests) {
-        if (requests[url].length > 0) {
-            const dataArray = requests[url];
-            dataArray.forEach(async (request) => {
-                try {
-                    await forwardRequest(url, request.data, request.headers, request.queryParams);
-                } catch (error) {
-                    console.error(`Failed to resend request to ${url}`, error);
-                }
-            });
-            requests[url] = [];
-        }
+async function sendCachedRequests() {
+  const cachedRequests = JSON.parse(fs.readFileSync(REQUESTS_FILE, "utf-8"));
+  const remainingRequests = [];
+
+  for (const request of cachedRequests) {
+    try {
+      await sendToCloud(request);
+      logger.info("Successfully sent cached request to cloud");
+    } catch (error) {
+      logger.error(`Failed to send cached request: ${error.message}`);
+      remainingRequests.push(request);
     }
-    fs.writeFileSync(REQUESTS_FILE, JSON.stringify(requests));
+  }
+
+  fs.writeFileSync(REQUESTS_FILE, JSON.stringify(remainingRequests));
+  logger.info(`${cachedRequests.length - remainingRequests.length} cached requests sent, ${remainingRequests.length} remaining`);
 }
 
-// Check connectivity every 5 minutes
+// Check connectivity every minute (for testing purposes)
 setInterval(checkConnectivity, CHECK_INTERVAL);
 
 app.listen(PORT, () => {
-    console.log(`Proxy server is running on port ${PORT}`);
+  logger.info(`Proxy server is running on port ${PORT}`);
 });
+
+// Initial connectivity check
+checkConnectivity();
